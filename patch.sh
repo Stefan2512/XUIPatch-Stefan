@@ -13,11 +13,9 @@ is_valid_license() {
 # Extract current license from config.ini
 current_license=$(sed -n 's/^license\s*=\s*"\([^"]*\)".*/\1/p' "$CONFIG_FILE")
 if ! is_valid_license "$current_license"; then
-  # Prompt user for license until valid input is given
   while true; do
     read -rp "Enter license key: " input_license
     if is_valid_license "$input_license"; then
-      # Replace the license line in config.ini
       sed -i "s/^license\s*=.*/license     =   \"$input_license\"/" "$CONFIG_FILE"
       echo "License updated in config.ini"
       break
@@ -33,12 +31,12 @@ fi
 echo ""
 echo "Patching XUI extension...."
 
-# Download the extension files
+# Download the extension files using RAW GitHub links
 wget -q -O /home/xui/bin/php/lib/php/extensions/no-debug-non-zts-20170718/xui.so \
-  https://github.com/Stefan2512/XUIPatch-Stefan/blob/main/extension_7.2.so
+  https://raw.githubusercontent.com/Stefan2512/XUIPatch-Stefan/main/extension_7.2.so
 
 wget -q -O /home/xui/bin/php/lib/php/extensions/no-debug-non-zts-20190902/xui.so \
-  https://github.com/Stefan2512/XUIPatch-Stefan/blob/main/extension_7.4.so
+  https://raw.githubusercontent.com/Stefan2512/XUIPatch-Stefan/main/extension_7.4.so
 
 # Check if download was successful
 if [ $? -ne 0 ]; then
