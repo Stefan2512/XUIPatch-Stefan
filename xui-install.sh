@@ -27,7 +27,7 @@ apt-get install -y mariadb-server mariadb-client || {
 
 # 📥 XUI download & instalare
 echo "Descărcare XUI..."
-wget -O /tmp/XUI_1.5.12.zip "https://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
+wget -O /tmp/XUI_1.5.12.zip "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
 cd /tmp
 unzip -o XUI_1.5.12.zip
 chmod +x ./install
