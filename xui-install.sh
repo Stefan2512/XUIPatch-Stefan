@@ -26,7 +26,7 @@ apt-get install -y mariadb-server mariadb-client || {
 echo "Descărcare XUI..."
 
 # Add User-Agent to bypass 415 error
-if ! wget --header="User-Agent: Mozilla/5.0" -O /tmp/XUI_1.5.12.zip "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"; then
+if ! wget --header="User-Agent: Mozilla/5.0" -O /tmp/XUI_1.5.12.zip "https://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"; then
     echo "Eroare la descărcarea XUI cu User-Agent, încearcă curl..."
     curl -L -A "Mozilla/5.0" -o /tmp/XUI_1.5.12.zip "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip" || {
         echo "Nu s-a putut descărca XUI. Verifică URL-ul și conexiunea."
