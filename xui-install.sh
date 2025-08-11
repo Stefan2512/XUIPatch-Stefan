@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "┌─────────────────────────────────────────────┐"
 echo "│    Preparing for Xui - 1.5.12 Installation  │"
-echo "│              Ubuntu 22.04 Fixed             │"
+echo "│              Ubuntu 22.04 Fixed              │"
 echo "└─────────────────────────────────────────────┘"
 
 set -e
