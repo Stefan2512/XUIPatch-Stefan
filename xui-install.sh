@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "┌─────────────────────────────────────────────┐"
 echo "│    Preparing for Xui - 1.5.12 Installation  │"
-echo "│              Ubuntu 22.04 Fixed              │"
+echo "│              Ubuntu 22.04 Fixed             │"
 echo "└─────────────────────────────────────────────┘"
 
 set -e
@@ -38,39 +38,40 @@ systemctl enable mariadb
 echo "Downloading XUI..."
 cd /tmp
 
-# Clean up any existing files
-rm -f XUI_1.5.12.zip
+# Check if file already exists (manual upload)
+if [ -f "XUI_1.5.12.zip" ]; then
+    echo "Found existing XUI_1.5.12.zip, verifying..."
+    if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
+        echo "✅ Using existing valid ZIP file"
+        download_success=true
+    else
+        echo "⚠️ Existing file is corrupted, will download fresh copy"
+        rm -f XUI_1.5.12.zip
+        download_success=false
+    fi
+else
+    download_success=false
+fi
+
+# Clean up any existing extracted files
 rm -rf XUI_1.5.12/
 
-# Try multiple download sources
-download_success=false
+# Try multiple download sources if no valid file exists
+if [ "$download_success" = false ]; then
+    # List of download sources to try (official source first)
+    declare -a download_sources=(
+        "https://update.xui.one/XUI_1.5.12.zip"
+        "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
+        "https://github.com/amidevous/xtreamui/releases/download/1.5.12/XUI_1.5.12.zip"
+        "https://raw.githubusercontent.com/Stefan2512/XUIPatch-Stefan/main/XUI_1.5.12.zip"
+    )
 
-# List of download sources to try
-declare -a download_sources=(
-    "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
-    "https://github.com/amidevous/xtreamui/releases/download/1.5.12/XUI_1.5.12.zip"
-    "https://raw.githubusercontent.com/Stefan2512/XUIPatch-Stefan/main/XUI_1.5.12.zip"
-)
-
-for source in "${download_sources[@]}"; do
-    echo "Trying to download from: $source"
-    
-    # Try with curl first
-    if curl -L --connect-timeout 30 --max-time 300 -A "Mozilla/5.0 (Linux; Ubuntu)" -o XUI_1.5.12.zip "$source" 2>/dev/null; then
-        # Verify it's a valid zip file
-        if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
-            download_success=true
-            echo "✅ Downloaded and verified from: $source"
-            break
-        else
-            echo "⚠️ Downloaded file is not a valid ZIP archive, trying next source..."
-            rm -f XUI_1.5.12.zip
-        fi
-    fi
-    
-    # Try with wget as backup
-    if [ "$download_success" = false ]; then
-        if wget --timeout=30 --tries=2 --header="User-Agent: Mozilla/5.0 (Linux; Ubuntu)" -O XUI_1.5.12.zip "$source" 2>/dev/null; then
+    for source in "${download_sources[@]}"; do
+        echo "Trying to download from: $source"
+        
+        # Try with curl first
+        if curl -L --connect-timeout 30 --max-time 300 -A "Mozilla/5.0 (Linux; Ubuntu)" -o XUI_1.5.12.zip "$source" 2>/dev/null; then
+            # Verify it's a valid zip file
             if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
                 download_success=true
                 echo "✅ Downloaded and verified from: $source"
@@ -80,35 +81,64 @@ for source in "${download_sources[@]}"; do
                 rm -f XUI_1.5.12.zip
             fi
         fi
-    fi
-done
+        
+        # Try with wget as backup
+        if [ "$download_success" = false ]; then
+            if wget --timeout=30 --tries=2 --header="User-Agent: Mozilla/5.0 (Linux; Ubuntu)" -O XUI_1.5.12.zip "$source" 2>/dev/null; then
+                if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
+                    download_success=true
+                    echo "✅ Downloaded and verified from: $source"
+                    break
+                else
+                    echo "⚠️ Downloaded file is not a valid ZIP archive, trying next source..."
+                    rm -f XUI_1.5.12.zip
+                fi
+            fi
+        fi
+    done
 
-if [ "$download_success" = false ]; then
-    echo "❌ Failed to download valid XUI archive from all sources."
-    echo "📋 Manual download instructions:"
-    echo "   1. Download XUI_1.5.12.zip manually from a working source"
-    echo "   2. Upload it to /tmp/ directory"
-    echo "   3. Run this script again"
-    exit 1
+    if [ "$download_success" = false ]; then
+        echo "❌ Failed to download valid XUI archive from all sources."
+        echo "📋 Manual download instructions:"
+        echo "   1. Download XUI_1.5.12.zip manually from: https://update.xui.one/XUI_1.5.12.zip"
+        echo "   2. Upload it to /tmp/ directory on this server"
+        echo "   3. Run this script again (it will detect and use the uploaded file)"
+        echo ""
+        echo "   Alternative sources to try manually:"
+        echo "   - https://www.worldofiptv.com/ (registration required)"
+        echo "   - Search for 'XUI 1.5.12 download' on GitHub"
+        echo ""
+        read -p "Press Enter to exit, or 'c' to continue without XUI installation: " continue_choice
+        if [ "$continue_choice" != "c" ]; then
+            exit 1
+        else
+            echo "⚠️ Skipping XUI installation, continuing with license setup..."
+            skip_xui=true
+        fi
+    fi
 fi
 
 echo "Extracting XUI..."
-if ! unzip -o XUI_1.5.12.zip; then
-    echo "❌ Failed to extract XUI archive"
-    echo "🔍 Checking file type..."
-    file XUI_1.5.12.zip
-    echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
-    exit 1
-fi
+if [ "$skip_xui" != "true" ]; then
+    if ! unzip -o XUI_1.5.12.zip; then
+        echo "❌ Failed to extract XUI archive"
+        echo "🔍 Checking file type..."
+        file XUI_1.5.12.zip
+        echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
+        exit 1
+    fi
 
-# Make install script executable and run it
-if [ -f "./install" ]; then
-    chmod +x ./install
-    echo "Running XUI installer..."
-    ./install
+    # Make install script executable and run it
+    if [ -f "./install" ]; then
+        chmod +x ./install
+        echo "Running XUI installer..."
+        ./install
+    else
+        echo "❌ Install script not found in archive"
+        exit 1
+    fi
 else
-    echo "❌ Install script not found in archive"
-    exit 1
+    echo "⚠️ Skipping XUI extraction and installation"
 fi
 
 # ⏱️ License message
