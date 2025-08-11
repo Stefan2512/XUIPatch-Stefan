@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "┌─────────────────────────────────────────────┐"
 echo "│    Preparing for Xui - 1.5.12 Installation  │"
-echo "│              Ubuntu 22.04 Fixed             │"
+echo "│           Versiunea sex in guritza!         │"
 echo "└─────────────────────────────────────────────┘"
 
 set -e
@@ -34,112 +34,52 @@ fi
 systemctl start mariadb
 systemctl enable mariadb
 
-# 📥 XUI download & installation
-echo "Downloading XUI..."
+# 📥 XUI installation from local file
+echo "Looking for XUI archive..."
 cd /tmp
 
-# Check if file already exists (manual upload)
+# Check if file exists locally
 if [ -f "XUI_1.5.12.zip" ]; then
-    echo "Found existing XUI_1.5.12.zip, verifying..."
+    echo "✅ Found XUI_1.5.12.zip in /tmp/"
+    echo "Verifying archive integrity..."
     if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
-        echo "✅ Using existing valid ZIP file"
+        echo "✅ Archive is valid and ready for installation"
         download_success=true
     else
-        echo "⚠️ Existing file is corrupted, will download fresh copy"
-        rm -f XUI_1.5.12.zip
-        download_success=false
+        echo "❌ Archive is corrupted or invalid"
+        echo "🔍 Checking file type..."
+        file XUI_1.5.12.zip
+        echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
+        echo "Please upload a valid XUI_1.5.12.zip file to /tmp/ and try again"
+        exit 1
     fi
 else
-    download_success=false
+    echo "❌ XUI_1.5.12.zip not found in /tmp/"
+    echo "📋 Please upload the XUI_1.5.12.zip file to /tmp/ directory and run the script again"
+    echo "Expected file path: /tmp/XUI_1.5.12.zip"
+    exit 1
 fi
 
 # Clean up any existing extracted files
 rm -rf XUI_1.5.12/
 
-# Try multiple download sources if no valid file exists
-if [ "$download_success" = false ]; then
-    # List of download sources to try (your LimeWire source first)
-    declare -a download_sources=(
-        "https://limewire.com/d/UFJyy#Xc5RyCLUpA"
-        "https://update.xui.one/XUI_1.5.12.zip"
-        "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
-        "https://github.com/amidevous/xtreamui/releases/download/1.5.12/XUI_1.5.12.zip"
-        "https://raw.githubusercontent.com/Stefan2512/XUIPatch-Stefan/main/XUI_1.5.12.zip"
-    )
-
-    for source in "${download_sources[@]}"; do
-        echo "Trying to download from: $source"
-        
-        # Try with curl first
-        if curl -L --connect-timeout 30 --max-time 300 -A "Mozilla/5.0 (Linux; Ubuntu)" -o XUI_1.5.12.zip "$source" 2>/dev/null; then
-            # Verify it's a valid zip file
-            if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
-                download_success=true
-                echo "✅ Downloaded and verified from: $source"
-                break
-            else
-                echo "⚠️ Downloaded file is not a valid ZIP archive, trying next source..."
-                rm -f XUI_1.5.12.zip
-            fi
-        fi
-        
-        # Try with wget as backup
-        if [ "$download_success" = false ]; then
-            if wget --timeout=30 --tries=2 --header="User-Agent: Mozilla/5.0 (Linux; Ubuntu)" -O XUI_1.5.12.zip "$source" 2>/dev/null; then
-                if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
-                    download_success=true
-                    echo "✅ Downloaded and verified from: $source"
-                    break
-                else
-                    echo "⚠️ Downloaded file is not a valid ZIP archive, trying next source..."
-                    rm -f XUI_1.5.12.zip
-                fi
-            fi
-        fi
-    done
-
-    if [ "$download_success" = false ]; then
-        echo "❌ Failed to download valid XUI archive from all sources."
-        echo "📋 Manual download instructions:"
-        echo "   1. Download XUI_1.5.12.zip manually from: https://limewire.com/d/UFJyy#Xc5RyCLUpA"
-        echo "   2. Upload it to /tmp/ directory on this server"
-        echo "   3. Run this script again (it will detect and use the uploaded file)"
-        echo ""
-        echo "   Alternative sources to try manually:"
-        echo "   - https://update.xui.one/XUI_1.5.12.zip"
-        echo "   - https://www.worldofiptv.com/ (registration required)"
-        echo ""
-        read -p "Press Enter to exit, or 'c' to continue without XUI installation: " continue_choice
-        if [ "$continue_choice" != "c" ]; then
-            exit 1
-        else
-            echo "⚠️ Skipping XUI installation, continuing with license setup..."
-            skip_xui=true
-        fi
-    fi
+echo "Extracting XUI..."
+if ! unzip -o XUI_1.5.12.zip; then
+    echo "❌ Failed to extract XUI archive"
+    echo "🔍 Checking file type..."
+    file XUI_1.5.12.zip
+    echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
+    exit 1
 fi
 
-echo "Extracting XUI..."
-if [ "$skip_xui" != "true" ]; then
-    if ! unzip -o XUI_1.5.12.zip; then
-        echo "❌ Failed to extract XUI archive"
-        echo "🔍 Checking file type..."
-        file XUI_1.5.12.zip
-        echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
-        exit 1
-    fi
-
-    # Make install script executable and run it
-    if [ -f "./install" ]; then
-        chmod +x ./install
-        echo "Running XUI installer..."
-        ./install
-    else
-        echo "❌ Install script not found in archive"
-        exit 1
-    fi
+# Make install script executable and run it
+if [ -f "./install" ]; then
+    chmod +x ./install
+    echo "Running XUI installer..."
+    ./install
 else
-    echo "⚠️ Skipping XUI extraction and installation"
+    echo "❌ Install script not found in archive"
+    exit 1
 fi
 
 # ⏱️ License message
