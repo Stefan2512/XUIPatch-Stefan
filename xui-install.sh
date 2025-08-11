@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "┌─────────────────────────────────────────────┐"
 echo "│    Preparing for Xui - 1.5.12 Installation  │"
-echo "│              Ubuntu 22.04 Fixed              │"
+echo "│              Ubuntu 22.04 Fixed             │"
 echo "└─────────────────────────────────────────────┘"
 
 set -e
@@ -45,29 +45,59 @@ rm -rf XUI_1.5.12/
 # Try multiple download sources
 download_success=false
 
-# Try first source with User-Agent
-if wget --timeout=30 --tries=3 --header="User-Agent: Mozilla/5.0 (Linux; Ubuntu)" -O XUI_1.5.12.zip "https://mega.nz/file/Q75hBYBS#zeAjRwy6BbxQ-PXEXbDzZP8A8kihUiwJNa9OG6WFEjs" 2>/dev/null; then
-    download_success=true
-    echo "Downloaded from primary source"
-elif curl -L --connect-timeout 30 --max-time 300 -A "Mozilla/5.0 (Linux; Ubuntu)" -o XUI_1.5.12.zip "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip" 2>/dev/null; then
-    download_success=true
-    echo "Downloaded from backup source"
-fi
+# List of download sources to try
+declare -a download_sources=(
+    "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
+    "https://github.com/amidevous/xtreamui/releases/download/1.5.12/XUI_1.5.12.zip"
+    "https://raw.githubusercontent.com/Stefan2512/XUIPatch-Stefan/main/XUI_1.5.12.zip"
+)
+
+for source in "${download_sources[@]}"; do
+    echo "Trying to download from: $source"
+    
+    # Try with curl first
+    if curl -L --connect-timeout 30 --max-time 300 -A "Mozilla/5.0 (Linux; Ubuntu)" -o XUI_1.5.12.zip "$source" 2>/dev/null; then
+        # Verify it's a valid zip file
+        if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
+            download_success=true
+            echo "✅ Downloaded and verified from: $source"
+            break
+        else
+            echo "⚠️ Downloaded file is not a valid ZIP archive, trying next source..."
+            rm -f XUI_1.5.12.zip
+        fi
+    fi
+    
+    # Try with wget as backup
+    if [ "$download_success" = false ]; then
+        if wget --timeout=30 --tries=2 --header="User-Agent: Mozilla/5.0 (Linux; Ubuntu)" -O XUI_1.5.12.zip "$source" 2>/dev/null; then
+            if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
+                download_success=true
+                echo "✅ Downloaded and verified from: $source"
+                break
+            else
+                echo "⚠️ Downloaded file is not a valid ZIP archive, trying next source..."
+                rm -f XUI_1.5.12.zip
+            fi
+        fi
+    fi
+done
 
 if [ "$download_success" = false ]; then
-    echo "❌ Failed to download XUI. Please check your internet connection and try again."
-    exit 1
-fi
-
-# Verify the download
-if [ ! -f "XUI_1.5.12.zip" ] || [ ! -s "XUI_1.5.12.zip" ]; then
-    echo "❌ Downloaded file is empty or corrupted"
+    echo "❌ Failed to download valid XUI archive from all sources."
+    echo "📋 Manual download instructions:"
+    echo "   1. Download XUI_1.5.12.zip manually from a working source"
+    echo "   2. Upload it to /tmp/ directory"
+    echo "   3. Run this script again"
     exit 1
 fi
 
 echo "Extracting XUI..."
 if ! unzip -o XUI_1.5.12.zip; then
     echo "❌ Failed to extract XUI archive"
+    echo "🔍 Checking file type..."
+    file XUI_1.5.12.zip
+    echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
     exit 1
 fi
 
