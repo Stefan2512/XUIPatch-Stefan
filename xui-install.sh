@@ -6,138 +6,57 @@ echo "└───────────────────────�
 
 set -e
 
-# Check if running as root
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root (use sudo)" 
-   exit 1
-fi
-
-# 🛠️ Fix, update, install basics
-echo "Fixing broken packages and updating system..."
+# 🛠️ Fix, update, install de bază
 apt --fix-broken install -y
 apt update && apt upgrade -y
 apt install -y software-properties-common dirmngr wget unzip zip curl gnupg2 ca-certificates
 
-# 📦 MariaDB repo & installation for Ubuntu 22.04 (jammy)
-echo "Setting up MariaDB repository..."
+# 📦 MariaDB repo & instalare pentru Ubuntu 22.04 (jammy)
 curl -LsS https://mariadb.org/mariadb_release_signing_key.asc | gpg --dearmor | tee /usr/share/keyrings/mariadb-keyring.gpg > /dev/null
+
 echo "deb [arch=amd64,arm64,ppc64el signed-by=/usr/share/keyrings/mariadb-keyring.gpg] http://mirror.lstn.net/mariadb/repo/10.6/ubuntu jammy main" > /etc/apt/sources.list.d/mariadb.list
 
-echo "Installing MariaDB..."
 apt update
-if ! apt-get install -y mariadb-server mariadb-client; then
-    echo "Trying alternative version..."
+
+apt-get install -y mariadb-server mariadb-client || {
+    echo "Încercare cu versiune alternativă..."
     apt-get install -y mariadb-server-10.6 mariadb-client-10.6
-fi
+}
 
-# Start and enable MariaDB
-systemctl start mariadb
-systemctl enable mariadb
+# 📥 XUI download & instalare
+echo "Descărcare XUI..."
 
-# 📥 XUI installation from local file
-echo "Looking for XUI archive..."
-cd /tmp
-
-# Check if file exists locally
-if [ -f "XUI_1.5.12.zip" ]; then
-    echo "✅ Found XUI_1.5.12.zip in /tmp/"
-    echo "Verifying archive integrity..."
-    if unzip -t XUI_1.5.12.zip >/dev/null 2>&1; then
-        echo "✅ Archive is valid and ready for installation"
-        download_success=true
-    else
-        echo "❌ Archive is corrupted or invalid"
-        echo "🔍 Checking file type..."
-        file XUI_1.5.12.zip
-        echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
-        echo "Please upload a valid XUI_1.5.12.zip file to /tmp/ and try again"
+# Add User-Agent to bypass 415 error
+if ! wget --header="User-Agent: Mozilla/5.0" -O /tmp/XUI_1.5.12.zip "https://github.com/Stefan2512/XUIPatch-Stefan/releases/download/v1/XUI_1.5.12.zip"; then
+    echo "Eroare la descărcarea XUI cu User-Agent, încearcă curl..."
+    curl -L -A "Mozilla/5.0" -o /tmp/XUI_1.5.12.zip "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip" || {
+        echo "Nu s-a putut descărca XUI. Verifică URL-ul și conexiunea."
         exit 1
-    fi
-else
-    echo "❌ XUI_1.5.12.zip not found in /tmp/"
-    echo "📋 Please upload the XUI_1.5.12.zip file to /tmp/ directory and run the script again"
-    echo "Expected file path: /tmp/XUI_1.5.12.zip"
-    exit 1
+    }
 fi
 
-# Clean up any existing extracted files
-rm -rf XUI_1.5.12/
+cd /tmp
+unzip -o XUI_1.5.12.zip
+chmod +x ./install
+./install
 
-echo "Extracting XUI..."
-if ! unzip -o XUI_1.5.12.zip; then
-    echo "❌ Failed to extract XUI archive"
-    echo "🔍 Checking file type..."
-    file XUI_1.5.12.zip
-    echo "📋 File size: $(ls -lh XUI_1.5.12.zip | awk '{print $5}')"
-    exit 1
-fi
-
-# Make install script executable and run it
-if [ -f "./install" ]; then
-    chmod +x ./install
-    echo "Running XUI installer..."
-    ./install
-else
-    echo "❌ Install script not found in archive"
-    exit 1
-fi
-
-# ⏱️ License message
+# ⏱️ Mesaj licență
 echo
-echo "Testing new license..."
+echo "Testing new license:"
 sleep 3
 
-# 🔐 License installation
-echo "Checking License key and updating system..."
+# 🔐 Instalare licență
 cd /root
+echo "Checking License key and update system"
+wget -qO- https://github.com/Stefan2512/XUIPatch-Stefan/raw/main/xui_license.tar.gz | tar -xzf -
+bash ./install.sh >/dev/null 2>&1
 
-# Download and extract license files
-if wget --timeout=30 -qO- https://github.com/Stefan2512/XUIPatch-Stefan/raw/main/xui_license.tar.gz | tar -xzf - 2>/dev/null; then
-    if [ -f "./install.sh" ]; then
-        echo "Installing license components..."
-        bash ./install.sh >/dev/null 2>&1
-    else
-        echo "⚠️ License install script not found, continuing..."
-    fi
-else
-    echo "⚠️ Could not download license files, continuing..."
-fi
+# 📝 Input utilizator
+read -p "Enter Your license key: " license_key
+echo "Checking the License Key"
+read -p "Enter your email address: " email
 
-# 📝 User input with validation
-while true; do
-    read -p "Enter Your license key: " license_key
-    if [ -n "$license_key" ]; then
-        break
-    else
-        echo "License key cannot be empty. Please try again."
-    fi
-done
+# 🔧 Patch final
+bash <(wget -qO- https://github.com/Stefan2512/XUIPatch-Stefan/raw/main/patch.sh)
 
-echo "Checking the License Key..."
-
-while true; do
-    read -p "Enter your email address: " email
-    if [[ "$email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
-        break
-    else
-        echo "Please enter a valid email address."
-    fi
-done
-
-# 🔧 Final patch
-echo "Applying final patches..."
-if ! bash <(wget --timeout=30 -qO- https://github.com/Stefan2512/XUIPatch-Stefan/raw/main/patch.sh 2>/dev/null); then
-    echo "⚠️ Could not apply patches, but XUI should still work"
-fi
-
-# Clean up temporary files
-cd /tmp
-rm -f XUI_1.5.12.zip
-rm -rf XUI_1.5.12/
-
-echo "✅ Installation complete for Ubuntu 22.04!"
-echo "📋 Next steps:"
-echo "   1. Configure your firewall to allow necessary ports"
-echo "   2. Set up MariaDB security (run: mysql_secure_installation)"
-echo "   3. Access XUI through your web browser"
-echo "   4. Check XUI logs if you encounter any issues"
+echo "✅ Instalare completă pentru Ubuntu 22.04!"
