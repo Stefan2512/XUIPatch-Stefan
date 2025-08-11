@@ -58,8 +58,9 @@ rm -rf XUI_1.5.12/
 
 # Try multiple download sources if no valid file exists
 if [ "$download_success" = false ]; then
-    # List of download sources to try (official source first)
+    # List of download sources to try (your LimeWire source first)
     declare -a download_sources=(
+        "https://limewire.com/d/UFJyy#Xc5RyCLUpA"
         "https://update.xui.one/XUI_1.5.12.zip"
         "http://iptvmediapro.ro/appsdownload/XUI_1.5.12.zip"
         "https://github.com/amidevous/xtreamui/releases/download/1.5.12/XUI_1.5.12.zip"
@@ -100,13 +101,13 @@ if [ "$download_success" = false ]; then
     if [ "$download_success" = false ]; then
         echo "❌ Failed to download valid XUI archive from all sources."
         echo "📋 Manual download instructions:"
-        echo "   1. Download XUI_1.5.12.zip manually from: https://update.xui.one/XUI_1.5.12.zip"
+        echo "   1. Download XUI_1.5.12.zip manually from: https://limewire.com/d/UFJyy#Xc5RyCLUpA"
         echo "   2. Upload it to /tmp/ directory on this server"
         echo "   3. Run this script again (it will detect and use the uploaded file)"
         echo ""
         echo "   Alternative sources to try manually:"
+        echo "   - https://update.xui.one/XUI_1.5.12.zip"
         echo "   - https://www.worldofiptv.com/ (registration required)"
-        echo "   - Search for 'XUI 1.5.12 download' on GitHub"
         echo ""
         read -p "Press Enter to exit, or 'c' to continue without XUI installation: " continue_choice
         if [ "$continue_choice" != "c" ]; then
